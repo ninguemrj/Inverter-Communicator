@@ -17,27 +17,49 @@ SoftwareSerial Serial3(RX_pin, TX_pin);
 
 #endif
 
-#define LCDADDR 0x27  // address of LCD
-bool lcdok = false;                            // LCD not present
-
+#define LCDADDR 0x27                           // address of LCD
+bool lcdok = false;                            // LCD not present by default (don't change it)
+String stringOne;
 String swversion="0.1a";
 
+LiquidCrystal_I2C lcd(LCDADDR, 20, 4);
+#include <lib_lcd_helper.h>
 
+// commands in hex without crc and CR (don't add CRC and CR)
+// String QPI = "\x51\x50\x49";
 String QPIGS = "\x51\x50\x49\x47\x53"; // crc "\xB7\xA9" // CR "\x0D"
-//String QPIGS = "QPIGS";
-String stringOne;
-
-//variables for Inverter CRC added
-  uint16_t vgCrcCheck;
-  char vgHexOne;
-  char vgHexTwo;
-  int vRequestLen = 0;
-
-
-char pipInputBuf[500];
-
-
-int pipInputPointer = 0;
+/*
+String QPIWS = "\x51\x50\x49\x57\x53";
+String QDI = "\x51\x44\x49";
+String QMOD = "\x51\x4D\x4F\x44";
+String QVFW =  "\x51\x56\x46\x57";
+String QVFW2 = "\x51\x56\x46\x57\x32";
+String QFLAG = "\x51\x46\x4C\x41\x47";
+String QPIWS = "\x51\x50\x49\x57\x53";
+String QMCHGCR = "\x51\x4D\x43\x48\x47\x43\x52";
+String QMUCHGCR = "\x51\x4D\x55\x43\x48\x47\x43\x52";
+String QBOOT = "\x51\x42\x4F\x4F\x54";
+String QOPM = "\x51\x4F\x50\x4D";
+String QPIRI = "\x51\x50\x49\x52\x49";
+String QPGS0 = "\x51\x50\x47\x53\x30";
+String QBV = "\x51\x42\x56";
+String PF = "\x50\x46";
+String POP02 = "\x50\x4F\x50\x30\x32";
+String POP01 = "\x50\x4F\x50\x30\x31";
+String POP00 = "\x50\x4F\x50\x30\x30";
+String PCP00 = "\x50\x43\x50\x30\x30";
+String PCP01 = "\x50\x43\x50\x30\x31";
+String PCP02 = "\x50\x43\x50\x30\x32";
+String MUCHGC002 = "\x4D\x55\x43\x48\x47\x43\x30\x30\x32";
+String MUCHGC010 = "\x4D\x55\x43\x48\x47\x43\x30\x31\x30";
+String MUCHGC020 = "\x4D\x55\x43\x48\x47\x43\x30\x32\x30";
+String MUCHGC030 = "\x4D\x55\x43\x48\x47\x43\x30\x33\x30";
+String PPCP000 = "\x50\x50\x43\x50\x30\x30\x30";
+String PPCP001 = "\x50\x50\x43\x50\x30\x30\x31";
+String PPCP002 = "\x50\x50\x43\x50\x30\x30\x32";
+String QPIGS2 = "\x51\x50\x49\x47\x53\x32";
+String POP03 = "\x50\x4F\x50\x30\x33";
+*/
 
 // Structure to store the data for QPIGS
 struct pipVals_t {
@@ -61,19 +83,15 @@ struct pipVals_t {
   char deviceStatus[8];             // 8 bit binary
 } pipVals;
 
-LiquidCrystal_I2C lcd(LCDADDR, 20, 4);
-#include <lib_lcd_helper.h>
-
 void QPIGS_val()
 {
-  //uint16_t crc;
+  char pipInputBuf[500];
   char *val;
-  //char pipstatus[40];
+  
   strcpy(pipInputBuf, stringOne.c_str());
      // Now split the packet into the values
         val = strtok((char *) pipInputBuf, " "); // get the first value
-        //strcpy(pipVals.gridVoltage, val + 1); // Skip the initial '('
-        pipVals.gridVoltage = atoi(val + 1);
+        pipVals.gridVoltage = atoi(val + 1);  // Skip the initial '('
 
         val = strtok(0, " "); // Get the next value
         pipVals.gridFrequency = atoi(val) * 10 ;
@@ -113,6 +131,7 @@ void QPIGS_val()
 
         val = strtok(0, " "); // Get the next value
         pipVals.PVVoltage = atoi(val);
+
         // Calculate PV Power
         pipVals.PVPower= pipVals.PVVoltage * pipVals.PVCurrent;
 
@@ -124,8 +143,6 @@ void QPIGS_val()
 
         val = strtok(0, " "); // Get the next value
         strcpy(pipVals.deviceStatus, val);
-        
-        
 }
 
 void QPIGS_print()
@@ -163,12 +180,10 @@ void QPIGS_print()
         Serial.print(pipVals.PVPower);  Serial.println(" W");
         Serial.print("battery SCC:.......... ");
         Serial.print(pipVals.batterySCC/100.00,2); Serial.println(" V");
-        
         Serial.print("battery DischargeDischargeCurrent: ");
         Serial.print(pipVals.batteryDischargeCurrent); Serial.println(" A");
         Serial.print("DeviceStatus:......... ");
         Serial.println(String(pipVals.deviceStatus));
-        
 }
 
 void QPIGS_lcd()
@@ -216,7 +231,6 @@ void QPIGS_lcd()
 
 
 // ******************************************  CRC Functions  ******************************************
-
 uint16_t crc_xmodem_update (uint16_t crc, uint8_t data)
 {
   int i;
@@ -290,6 +304,12 @@ void lcdhome()
 
 void inverter_send(String inv_command)
 {
+  uint16_t vgCrcCheck;
+  int vRequestLen = 0;
+  char s[6];
+  int xx; 
+  int yy;
+
   vRequestLen = inv_command.length();
   char vRequestArray[vRequestLen]; //Arrary define
   inv_command.toCharArray(vRequestArray, vRequestLen + 1);
@@ -302,15 +322,9 @@ void inverter_send(String inv_command)
   String vCrcCorrect = vgCrcCheckString.substring(0,2) + " " + vgCrcCheckString.substring(2,4);
         
   //CRC are returned as B7A9 - need to separate them and change from ASCII to HEX
-  char s[6];
   vCrcCorrect.toCharArray(s, 6);
-  int xx; 
-  int yy;
   sscanf(s, "%x %x", &xx, &yy);  
-  //vgHexOne = xx;
-  //vgHexTwo = yy;
   
-  //char inverter_cmd = QPIGS.toCharArray(vRequestArray, vRequestLen -3) . itoa(vgHexOne) . itoa(yy) . "\r";
   inv_command += char(xx);
   inv_command += char(yy);
   inv_command += "\x0D";
@@ -321,7 +335,6 @@ void inverter_send(String inv_command)
   #else
   Serial2.print(inv_command);
   #endif
-
 }
 
 // ******************************************  Setup  ******************************************
@@ -348,11 +361,9 @@ void setup()
   Serial2.setTimeout(10000);
     while (!Serial2)
     {
-    ; // wait for serial port to connect.2
+    ; // wait for Serial2 port to connect.
     }
   #endif
-  
-  
   
   lcdinit();
   if ( lcdok == true ) {
@@ -362,7 +373,7 @@ void setup()
       lcdsetCursor(4,1);
       lcdprint("Communicator");
       lcdsetCursor(3,2);
-      lcdprint("Booting. V"+String(swversion));
+      lcdprint("V"+String(swversion));
   }
   delay(3000);
  lcdhome();
@@ -372,37 +383,6 @@ void setup()
 void loop() {
   yield();
   
-  //vRequestLen = QPIGS.length();
-  // Shifting QPIGS to Character Array
-  //char vRequestArray[vRequestLen]; //Arrary define
-  //QPIGS.toCharArray(vRequestArray, vRequestLen + 1);
-  
-  //Calculating CRC
-  //vgCrcCheck = calc_crc(vRequestArray,vRequestLen);
-
-  // CRC returns two characters - these need to be separated and send as HEX to Inverter
-  //String vgCrcCheckString = String(vgCrcCheck, HEX);
-  //String vCrcCorrect = vgCrcCheckString.substring(0,2) + " " + vgCrcCheckString.substring(2,4);
-        
-  //CRC are returned as B7A9 - need to separate them and change from ASCII to HEX
-  //char s[6];
-  //vCrcCorrect.toCharArray(s, 6);
-  //int xx; 
-  //int yy;
-  //sscanf(s, "%x %x", &xx, &yy);  
-  //vgHexOne = xx;
-  //vgHexTwo = yy;      
-  //Sending Request to inverter
-  //#ifdef USE_SOFTWARESERIAL
-  //Serial3.print(QPIGS);
-  //Serial3.print(vgHexOne); //CRC One
-  //Serial3.print(vgHexTwo);  //CRC Two
-  //Serial3.print("\r");
-  //#else
-  //Serial2.print(QPIGS);
-  //Serial2.print(vgHexOne); //CRC One
-  //Serial2.print(vgHexTwo);  //CRC Two
-  //Serial2.print("\r");
   inverter_send("QPIGS");
 
   //#endif
