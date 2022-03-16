@@ -16,6 +16,8 @@ Used modules:
 - MAX232 DB9 Male
 - I2C 2004 LCD
 
+Code editor: VSCode
+
 Stage: Establsih communication with inverter, show basic info values (QPIGS) on LCD 
 
 Future plans:
@@ -24,11 +26,12 @@ Future plans:
 - implement configuration commands
 - web server
 
-used materials:
-https://forum.arduino.cc/t/rs232-read-data-from-mpp-solar-inverter/600960
+Useful materials:
+- Documents folder
+- https://forum.arduino.cc/t/rs232-read-data-from-mpp-solar-inverter/600960
+
+My Mpp Solar device: PS-300VA-24V (PowMr)
+https://sunrayups.en.made-in-china.com/product/vSFmfUxjZNpc/China-New-Model-2400W-230VAC-24VDC-PWM-50A-High-Frequency-Pure-Sine-Wave-off-Grid-Hybrid-Solar-Inverter-HPS-3K-.html
 
 
 Contribuitors, Developers are welcome
-
-My testing device: PS-300VA-24V (PowMr)
-https://sunrayups.en.made-in-china.com/product/vSFmfUxjZNpc/China-New-Model-2400W-230VAC-24VDC-PWM-50A-High-Frequency-Pure-Sine-Wave-off-Grid-Hybrid-Solar-Inverter-HPS-3K-.html
