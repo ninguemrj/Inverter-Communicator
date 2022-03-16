@@ -20,7 +20,7 @@ SoftwareSerial Serial3(RX_pin, TX_pin);
 #define LCDADDR 0x27                           // address of LCD
 bool lcdok = false;                            // LCD not present by default (don't change it)
 String stringOne;
-String swversion="0.1a";
+String swversion="0.1b";
 
 LiquidCrystal_I2C lcd(LCDADDR, 20, 4);
 #include <lib_lcd_helper.h>
