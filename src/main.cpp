@@ -372,7 +372,7 @@ void setup()
       lcdprint("Solar Inverter");
       lcdsetCursor(4,1);
       lcdprint("Communicator");
-      lcdsetCursor(3,2);
+      lcdsetCursor(7,2);
       lcdprint("V"+String(swversion));
   }
   delay(3000);
@@ -400,13 +400,16 @@ void loop() {
   // (NAK handle ???    // not accepted command message from inverter
   if (stringOne.substring(0,3) != "(NAK" )
     {
-  Serial.println (stringOne.substring(0,stringOne.length()-2));
-  QPIGS_val();
-  QPIGS_print();
-  QPIGS_lcd();
-  delay(1000);
+    Serial.println (stringOne.substring(0,stringOne.length()-2));
+    QPIGS_val();
+    QPIGS_print();
+    QPIGS_lcd();
+    delay(1000);
     }
-//  }
+  #ifdef USE_SOFTWARESERIAL
+  #else
+  //}
+  #endif
   stringOne = "";
 }
 
