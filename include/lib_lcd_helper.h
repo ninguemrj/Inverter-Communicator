@@ -1,4 +1,8 @@
+#ifndef LIB_LCD_HELPER
+#define LIB_LCD_HELPER
 /* ********************************************************************** LCD Functions ********************************************** */
+#include <Wire.h>
+LiquidCrystal_I2C lcd(LCDADDR, LCDROWS, LCDLINES);
 
 void  lcdinit()
 {
@@ -106,3 +110,5 @@ void updateProgressBar(unsigned long count, unsigned long totalCount, int lineTo
   lcdsetCursor(number,lineToPrintOn);
   lcdwrite(remainder);   
 }
+
+#endif
