@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-// #defina USE_SOFTWARESERIAL     //uncomment this line if you want use softwareserial instead of hw
+// #define USE_SOFTWARESERIAL     //uncomment this line if you want use softwareserial instead of hw
 #ifdef USE_SOFTWARESERIAL
 #include <SoftwareSerial.h>
 // 16 RX, 17 TX for ESP-32 doit v1 using physical Serial2 with software.
