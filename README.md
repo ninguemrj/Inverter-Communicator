@@ -25,6 +25,7 @@ Future plans:
 - implemant all query commands
 - implement configuration commands
 - web server
+- multiple inverter conncetion
 
 Useful materials:
 - Documents folder
