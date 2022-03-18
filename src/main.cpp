@@ -35,16 +35,16 @@ void setup()
   #ifdef USE_SOFTWARESERIAL
   Serial.println("Setup serial3 for sodtwareserial");
   Serial3.begin(2400); //MPP-Solar inverter Baud Setting(http://www.offgrid.casa/wp-content/uploads/2017/10/HS_MS_MSX_RS232_Protocol_20140822_after_current_upgrade.pdf)
-  Serial3.setTimeout(10000);
+  Serial3.setTimeout(100);
     while (!Serial3)
     {
-    ; // wait for serial port to connect.
+    ; // wait for SoftwareSerial port to connect.
     }
   Serial3.flush();
   #else
   Serial.println("Setup physical Serial2");
   Serial2.begin(2400, SERIAL_8N1); //MPP-Solar inverter Baud Setting(http://www.offgrid.casa/wp-content/uploads/2017/10/HS_MS_MSX_RS232_Protocol_20140822_after_current_upgrade.pdf)
-  Serial2.setTimeout(10000);
+  Serial2.setTimeout(100);
     while (!Serial2)
     {
     ; // wait for Serial2 port to connect.
@@ -52,52 +52,64 @@ void setup()
   #endif
   
   lcdinit();
-  if ( lcdok == true ) {
-      lcdclear();
-      lcdsetCursor(3,0);
-      lcdprint("Solar Inverter");
-      lcdsetCursor(4,1);
-      lcdprint("Communicator");
-      lcdsetCursor(7,2);
-      lcdprint("V"+String(swversion));
-  }
+  if ( lcdok == true )
+    {
+    lcdclear();
+    lcdsetCursor(3,0);
+    lcdprint("Solar Inverter");
+    lcdsetCursor(4,1);
+    lcdprint("Communicator");
+    lcdsetCursor(7,2);
+    lcdprint("V"+String(swversion));
+    }
   delay(2000);
- //setup_rotary();
- QPIGS_lcd_base();
+  // setup_rotary();
+  QPIGS_lcd_base();
 }
 
 // ******************************************  Loop  ******************************************
 void loop() {
   yield();
   
-  inverter_send("QPIGS");
-
-  //#endif
-
-    #ifdef USE_SOFTWARESERIAL
-    //if (Serial3.available())
-    //  {
-    stringOne = Serial3.readStringUntil('\r');
-    #else
-    //if (Serial2.available())
-    //  {
-    stringOne = Serial2.readStringUntil('\r');
-    #endif
-
-  // (NAK handle ???    // not accepted command message from inverter
-  if (stringOne.substring(0,3) != "(NAK" )
+  if ( inverter_send("QPIGS")!="-1" )
     {
+    if (!LCDbase)
+      {
+      QPIGS_lcd_base();
+      }
+    if (nocommunication) 
+      {
+      nocommunication=false;
+      }
+  
+    Serial.println("read data from inverter");
+    #ifdef USE_SOFTWARESERIAL
+     stringOne = Serial3.readStringUntil('\x0D');
+    #else
+      stringOne = Serial2.readStringUntil('\x0D');
+    #endif
+  
     Serial.println (stringOne.substring(0,stringOne.length()-2));
-    QPIGS_val();
-    QPIGS_print();
-    QPIGS_lcd();
-    delay(1000);
+    QPIGS_val();                // split inverter answer and store in pipVals
+    QPIGS_print();              // print pipVals on serial port
+    QPIGS_lcd();                // print (some) pipVals in LCD
+    stringOne = "";             // empty string received by inverter
+    // loop_menu();
     }
-  #ifdef USE_SOFTWARESERIAL
-  #else
-  //}
-  #endif
-  stringOne = "";
-  // loop_menu();
+  else
+    { 
+    if (!nocommunication)
+      {
+      lcdclear();
+      lcdsetCursor(4,0);
+      lcdprint("No inverter");
+      lcdsetCursor(3,1);
+      lcdprint("communnication");
+      nocommunication=true;
+      LCDbase=false;
+      delay(1000);
+      }
+    }
+  delay(2000);
 }
 
