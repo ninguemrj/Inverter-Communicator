@@ -1,6 +1,9 @@
 #include <Arduino.h>
 
-// commands in hex without crc and CR (don't add CRC and CR)
+String NAK = "\x28\x4E\x41\x4B\x73\x73";   // "(NAKss"  this message receiving on not accepted command from inverter.
+
+// commands in hex without CRC and CR (don't add CRC and CR, it will be calculated and added before send)
+
 // String QPI = "\x51\x50\x49";
 String QPIGS = "\x51\x50\x49\x47\x53"; // crc "\xB7\xA9" // CR "\x0D"
 /*
@@ -37,6 +40,9 @@ String POP03 = "\x50\x4F\x50\x30\x33";
 */
 
 String stringOne;
+byte incomingdata;
+bool nocommunication=false;
+bool LCDbase = false;
 
 // Structure to store the data for QPIGS
 struct pipVals_t {
@@ -51,7 +57,7 @@ struct pipVals_t {
   uint32_t batteryVoltage;          // xx.xx V   *100
   uint32_t batteryChargeCurrent;    // xxx A
   uint32_t batteryCharge;           // %
-  uint32_t inverterTemperature;     // xxxx      *100
+  uint32_t inverterTemperature;     // xxxx      /100
   uint32_t PVCurrent;               // xx A
   uint32_t PVVoltage;               // xx V
   uint32_t PVPower;                 // xxxx W
@@ -66,128 +72,159 @@ void QPIGS_val()
   char *val;
   
   strcpy(pipInputBuf, stringOne.c_str());
-     // Now split the packet into the values
-        val = strtok((char *) pipInputBuf, " "); // get the first value
-        pipVals.gridVoltage = atoi(val + 1);  // Skip the initial '('
+  // Now split the packet into the values
+  val = strtok((char *) pipInputBuf, " "); // get the first value
+  if (atoi(val + 1) >10)   // aviod false valuse stored, because it shows 2-3V even if grid isn't connected.
+    {
+    pipVals.gridVoltage = atoi(val + 1);  // Skip the initial '('
+    }
+    else
+    {
+    pipVals.gridVoltage = 0;
+    }
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.gridFrequency = atoi(val) * 10 ;
+  val = strtok(0, " "); // Get the next value
+  pipVals.gridFrequency = atof(val) * 10 ;
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.acOutput = atoi(val);
+  val = strtok(0, " "); // Get the next value
+  pipVals.acOutput = atoi(val);
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.acFrequency = atoi(val) * 10;
+  val = strtok(0, " "); // Get the next value
+  pipVals.acFrequency = atof(val) * 10;
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.acApparentPower = atoi(val);
+  val = strtok(0, " "); // Get the next value
+  pipVals.acApparentPower = atoi(val);
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.acActivePower = atoi(val);
+  val = strtok(0, " "); // Get the next value
+  pipVals.acActivePower = atoi(val);
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.loadPercent = atoi(val);
+  val = strtok(0, " "); // Get the next value
+  pipVals.loadPercent = atoi(val);
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.busVoltage = atoi(val);
+  val = strtok(0, " "); // Get the next value
+  pipVals.busVoltage = atoi(val);
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.batteryVoltage = atoi(val)*100;
+  val = strtok(0, " "); // Get the next value
+  pipVals.batteryVoltage = atof(val)*100;
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.batteryChargeCurrent = atoi(val);
+  val = strtok(0, " "); // Get the next value
+  pipVals.batteryChargeCurrent = atoi(val);
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.batteryCharge = atoi(val);
+  val = strtok(0, " "); // Get the next value
+  pipVals.batteryCharge = atoi(val);
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.inverterTemperature = atoi(val);
+  val = strtok(0, " "); // Get the next value
+  pipVals.inverterTemperature = atoi(val);
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.PVCurrent = atoi(val);
+  val = strtok(0, " "); // Get the next value
+  pipVals.PVCurrent = atoi(val);
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.PVVoltage = atoi(val);
+  val = strtok(0, " "); // Get the next value
+  pipVals.PVVoltage = atoi(val);
 
-        // Calculate PV Power
-        pipVals.PVPower= pipVals.PVVoltage * pipVals.PVCurrent;
+  pipVals.PVPower= pipVals.PVVoltage * pipVals.PVCurrent; // Calculate PV Power
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.batterySCC = atoi(val)*100;
+  val = strtok(0, " "); // Get the next value
+  pipVals.batterySCC = atof(val)*100;
 
-        val = strtok(0, " "); // Get the next value
-        pipVals.batteryDischargeCurrent = atoi(val);
+  val = strtok(0, " "); // Get the next value
+  pipVals.batteryDischargeCurrent = atoi(val);
 
-        val = strtok(0, " "); // Get the next value
-        strcpy(pipVals.deviceStatus, val);
+  val = strtok(0, " "); // Get the next value
+  strcpy(pipVals.deviceStatus, val);
 }
 
 void QPIGS_print()
 {
-        // Print out readings
-        Serial.print("grid Voltage:......... ");
-        Serial.print(pipVals.gridVoltage); Serial.println(" V");
-        Serial.print("grid Frequency:....... ");
-        Serial.print(pipVals.gridFrequency/10.0,1); Serial.println(" Hz");
-        Serial.print("AC Output:............ ");
-        Serial.print(pipVals.acOutput); Serial.println(" V");
-        Serial.print("AC Frequency:......... ");
-        Serial.print(pipVals.acFrequency/10.0,1); Serial.println(" Hz");
-        Serial.print("AC ApparentPower:..... ");
-        Serial.print(pipVals.acApparentPower); Serial.println(" VA");
-        Serial.print("AC ActivePower:....... ");
-        Serial.print(pipVals.acActivePower); Serial.println(" W");
-        Serial.print("load Percent:......... ");
-        Serial.print(pipVals.loadPercent); Serial.println(" %");
-        Serial.print("bus Voltage:.......... ");
-        Serial.print(pipVals.busVoltage/100.00,2); Serial.println(" V");   // shoiuld divide by 100
-        Serial.print("battery Voltage:...... ");
-        Serial.print(pipVals.batteryVoltage/100.00,2); Serial.println(" V");
-        Serial.print("battery ChargeCurrent: ");
-        Serial.print(pipVals.batteryChargeCurrent); Serial.println(" A");
-        Serial.print("battery Charge:....... ");
-        Serial.print(pipVals.batteryCharge); Serial.println(" %");
-        Serial.print("inverter Temperature:. ");
-        Serial.print(pipVals.inverterTemperature/10.0); Serial.println(" C");
-        Serial.print("PV Current:........... ");
-        Serial.print(pipVals.PVCurrent); Serial.println(" A");
-        Serial.print("PV Voltage:........... ");
-        Serial.print(pipVals.PVVoltage); Serial.println(" V");
-        Serial.print("PV Power:............. ");
-        Serial.print(pipVals.PVPower);  Serial.println(" W");
-        Serial.print("battery SCC:.......... ");
-        Serial.print(pipVals.batterySCC/100.00,2); Serial.println(" V");
-        Serial.print("battery DischargeDischargeCurrent: ");
-        Serial.print(pipVals.batteryDischargeCurrent); Serial.println(" A");
-        Serial.print("DeviceStatus:......... ");
-        Serial.println(String(pipVals.deviceStatus));
+  // Print out readings
+  Serial.print("grid Voltage:......... ");
+  Serial.print(pipVals.gridVoltage); Serial.println(" V");
+  Serial.print("grid Frequency:....... ");
+  Serial.print(pipVals.gridFrequency/10.0,1); Serial.println(" Hz");
+  Serial.print("AC Output:............ ");
+  Serial.print(pipVals.acOutput); Serial.println(" V");
+  Serial.print("AC Frequency:......... ");
+  Serial.print(pipVals.acFrequency/10.0,1); Serial.println(" Hz");
+  Serial.print("AC ApparentPower:..... ");
+  Serial.print(pipVals.acApparentPower); Serial.println(" VA");
+  Serial.print("AC ActivePower:....... ");
+  Serial.print(pipVals.acActivePower); Serial.println(" W");
+  Serial.print("load Percent:......... ");
+  Serial.print(pipVals.loadPercent); Serial.println(" %");
+  Serial.print("bus Voltage:.......... ");
+  Serial.print(pipVals.busVoltage/100.00,2); Serial.println(" V"); 
+  Serial.print("battery Voltage:...... ");
+  Serial.print(pipVals.batteryVoltage/100.00,2); Serial.println(" V");
+  Serial.print("battery ChargeCurrent: ");
+  Serial.print(pipVals.batteryChargeCurrent); Serial.println(" A");
+  Serial.print("battery Charge:....... ");
+  Serial.print(pipVals.batteryCharge); Serial.println(" %");
+  Serial.print("inverter Temperature:. ");
+  Serial.print(pipVals.inverterTemperature/10.0); Serial.println(" C");
+  Serial.print("PV Current:........... ");
+  Serial.print(pipVals.PVCurrent); Serial.println(" A");
+  Serial.print("PV Voltage:........... ");
+  Serial.print(pipVals.PVVoltage); Serial.println(" V");
+  Serial.print("PV Power:............. ");
+  Serial.print(pipVals.PVPower);  Serial.println(" W");
+  Serial.print("battery SCC:.......... ");
+  Serial.print(pipVals.batterySCC/100.00,2); Serial.println(" V");
+  Serial.print("battery DischargeCurrent: ");
+  Serial.print(pipVals.batteryDischargeCurrent); Serial.println(" A");
+  Serial.print("DeviceStatus:......... ");
+  Serial.println(String(pipVals.deviceStatus));
 }
 
 void QPIGS_lcd()
 {
-        // Print out QPIGS values on LCD
-        lcdsetCursor(3,0); lcdprint("   ");   lcdsetCursor(3,0);  lcdprint(pipVals.gridVoltage);
-        lcdsetCursor(8,0); lcdprint("   ");   lcdsetCursor(8,0);  lcdprint(pipVals.gridFrequency/10.0,1);
-        lcdsetCursor(15,0); lcdprint("    "); lcdsetCursor(15,0); lcdprint(pipVals.acApparentPower);
-        lcdsetCursor(3,1); lcdprint("   ");   lcdsetCursor(3,1);  lcdprint(pipVals.acOutput);
-        lcdsetCursor(8,1); lcdprint("   ");   lcdsetCursor(8,1);  lcdprint(pipVals.acFrequency/10,1);
-        lcdsetCursor(15,1); lcdprint("   ");  lcdsetCursor(15,1); lcdprint(pipVals.acActivePower);
+  // Print out QPIGS values on LCD
+  lcdsetCursor(3,0); lcdprint("   ");   lcdsetCursor(3,0);  lcdprint(pipVals.gridVoltage);
+  lcdsetCursor(8,0); lcdprint("   ");   lcdsetCursor(8,0);  lcdprint(pipVals.gridFrequency/10.0,1);
+  lcdsetCursor(15,0); lcdprint("   ");  lcdsetCursor(15,0); lcdprint(pipVals.acApparentPower);
+  lcdsetCursor(3,1); lcdprint("   ");   lcdsetCursor(3,1);  lcdprint(pipVals.acOutput);
+  lcdsetCursor(8,1); lcdprint("   ");   lcdsetCursor(8,1);  lcdprint(pipVals.acFrequency/10.0,1);
+  lcdsetCursor(15,1); lcdprint("   ");  lcdsetCursor(15,1); lcdprint(pipVals.acActivePower);
         
-        // lcdprint("bus Voltage: "); lcdprint(pipVals.busVoltage/100); lcdprint(" V");    // not ift onto LCD
+  // lcdprint("bus Voltage: "); lcdprint(pipVals.busVoltage/100); lcdprint(" V");    // not ift onto LCD
       
-        lcdsetCursor(3,2); lcdprint("    ");  lcdsetCursor(3,2);  lcdprint(pipVals.batteryVoltage/100,2);
-        lcdsetCursor(10,2); lcdprint("   ");  lcdsetCursor(10,2); lcdprint(pipVals.batteryChargeCurrent);
-        lcdsetCursor(16,2); lcdprint("   ");  lcdsetCursor(16,2); lcdprint(pipVals.batteryCharge);
+  lcdsetCursor(3,2); lcdprint("    ");  lcdsetCursor(3,2);  lcdprint(pipVals.batteryVoltage/100.00,2);
+  lcdsetCursor(10,2); lcdprint("   ");  lcdsetCursor(10,2); lcdprint(pipVals.batteryChargeCurrent);
+  lcdsetCursor(16,2); lcdprint("   ");  lcdsetCursor(16,2); lcdprint(pipVals.batteryCharge);
         
-        // lcdprint("inverter Temperature:. ");  lcdprint(pipVals.inverterTemperature); lcdprint(" C");   // not fit onto LCD
+  // lcdprint("inverter Temperature:. ");  lcdprint(pipVals.inverterTemperature); lcdprint(" C");   // not fit onto LCD
         
-        lcdsetCursor(3,3); lcdprint("  ");   lcdsetCursor(3,3);  lcdprint(pipVals.PVVoltage);
-        lcdsetCursor(8,3); lcdprint("  ");   lcdsetCursor(8,3);  lcdprint(pipVals.PVCurrent);
-        lcdsetCursor(12,3); lcdprint("   "); lcdsetCursor(12,3); lcdprint(pipVals.PVPower);
-        lcdsetCursor(16,3); lcdprint("   "); lcdsetCursor(16,3); lcdprint(pipVals.loadPercent);
-        
+  lcdsetCursor(3,3); lcdprint("  ");   lcdsetCursor(3,3);  lcdprint(pipVals.PVVoltage);
+  lcdsetCursor(8,3); lcdprint("  ");   lcdsetCursor(8,3);  lcdprint(pipVals.PVCurrent);
+  lcdsetCursor(12,3); lcdprint("   "); lcdsetCursor(12,3); lcdprint(pipVals.PVPower);
+  lcdsetCursor(16,3); lcdprint("   "); lcdsetCursor(16,3); lcdprint(pipVals.loadPercent);
+  LCDbase=true;
 }
 
+void QPIGS_lcd_base()
+{
+  lcdclear();
+  lcdsetCursor(0,0);   lcdprint("Gr");  // Abbreviation of Grid
+  lcdsetCursor(0,1);   lcdprint("Ou");  // Abbreviation of Output
+  lcdsetCursor(0,2);   lcdprint("Ba");  // Abbreviation of Battery
+  lcdsetCursor(0,3);   lcdprint("PV");  // Abbreviation of PhotoVoltaic
+  //print metrics
+  lcdsetCursor(6,0);   lcdprint("V");   // Grid Voltage
+  lcdsetCursor(12,0);  lcdprint("Hz");  // Grid frequency
+  lcdsetCursor(18,0);  lcdprint("VA");  // Output load Apparent power (VA)
+
+  lcdsetCursor(6,1);   lcdprint("V");  //  Output Voltage
+  lcdsetCursor(12,1);  lcdprint("Hz"); //  Output Frequency
+  lcdsetCursor(19,1);  lcdprint("W");  //  Active power (load) 
+  
+  lcdsetCursor(8,2);   lcdprint("V");  // Battery Voltage
+  lcdsetCursor(13,2);  lcdprint("A");  // Battery charge current
+  lcdsetCursor(19,2);  lcdprint("%");  // Battery charge in %
+
+  lcdsetCursor(5,3);   lcdprint("V");  // PV voltage
+  lcdsetCursor(10,3);  lcdprint("A");  // PV current
+  lcdsetCursor(15,3);  lcdprint("W");  // PV power
+  lcdsetCursor(19,3);  lcdprint("%");  // Inverter load in %
+}
 
 // ******************************************  CRC Functions  ******************************************
 uint16_t crc_xmodem_update (uint16_t crc, uint8_t data)
@@ -217,34 +254,13 @@ uint16_t calc_crc(char *msg, int n)
       return(x);
 }
 
-void QPIGS_lcd_base()
+String inverter_send(String inv_command)
 {
-  lcdclear();
-  lcdsetCursor(0,0);   lcdprint("Gr");  // Abbreviation of Grid
-  lcdsetCursor(0,1);   lcdprint("Ou");  // Abbreviation of Output
-  lcdsetCursor(0,2);   lcdprint("Ba");  // Abbreviation of Battery
-  lcdsetCursor(0,3);   lcdprint("PV");  // Abbreviation of PhotoVoltaic
-  //print metrics
-  lcdsetCursor(6,0);   lcdprint("V");   // Grid Voltage
-  lcdsetCursor(12,0);  lcdprint("Hz");  // Grid frequency
-  lcdsetCursor(18,0);  lcdprint("VA");  // Output load Apparent power (VA)
-
-  lcdsetCursor(6,1);   lcdprint("V");  //  Output Voltage
-  lcdsetCursor(12,1);  lcdprint("Hz"); //  Output Frequency
-  lcdsetCursor(19,1);  lcdprint("W");  //  Active power (load) 
+  Serial2.print(NAK+"\r");
   
-  lcdsetCursor(8,2);   lcdprint("V");  // Battery Voltage
-  lcdsetCursor(13,2);  lcdprint("A");  // Battery discharge current
-  lcdsetCursor(19,2);  lcdprint("%");  // Battery charge in %
-
-  lcdsetCursor(5,3);   lcdprint("V");  // PV voltage
-  lcdsetCursor(10,3);  lcdprint("A");  // PV current
-  lcdsetCursor(15,3);  lcdprint("W");  // PV power
-  lcdsetCursor(19,3);  lcdprint("%");  // Inverter load in %
-}
-
-void inverter_send(String inv_command)
-{
+  if ((Serial2.readStringUntil('\x0D')) == NAK )
+   {
+    Serial2.flush();
   uint16_t vgCrcCheck;
   int vRequestLen = 0;
   char s[6];
@@ -266,9 +282,9 @@ void inverter_send(String inv_command)
   vCrcCorrect.toCharArray(s, 6);
   sscanf(s, "%x %x", &xx, &yy);  
   
-  inv_command += char(xx);
-  inv_command += char(yy);
-  inv_command += "\x0D";
+  inv_command += char(xx);   // add CRC byte 1
+  inv_command += char(yy);   // add CRC byte 2
+  inv_command += "\x0D";     // add CR
 
   //Sending Request to inverter
   #ifdef USE_SOFTWARESERIAL
@@ -276,4 +292,10 @@ void inverter_send(String inv_command)
   #else
   Serial2.print(inv_command);
   #endif
+   }
+   else
+   {
+     return "-1";
+   }
+   return "";
 }
