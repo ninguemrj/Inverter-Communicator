@@ -179,11 +179,11 @@ void QPIGS_lcd()
 {
   // Print out QPIGS values on LCD
   lcdsetCursor(3,0); lcdprint("   ");   lcdsetCursor(3,0);  lcdprint(pipVals.gridVoltage);
-  lcdsetCursor(8,0); lcdprint("   ");   lcdsetCursor(8,0);  lcdprint(pipVals.gridFrequency/10.0,1);
-  lcdsetCursor(15,0); lcdprint("   ");  lcdsetCursor(15,0); lcdprint(pipVals.acApparentPower);
+  lcdsetCursor(8,0); lcdprint("  ");    lcdsetCursor(8,0);  lcdprint(pipVals.gridFrequency/10,0);
+  lcdsetCursor(14,0); lcdprint("    "); lcdsetCursor(14,0); lcdprint(pipVals.acApparentPower);
   lcdsetCursor(3,1); lcdprint("   ");   lcdsetCursor(3,1);  lcdprint(pipVals.acOutput);
-  lcdsetCursor(8,1); lcdprint("   ");   lcdsetCursor(8,1);  lcdprint(pipVals.acFrequency/10.0,1);
-  lcdsetCursor(15,1); lcdprint("   ");  lcdsetCursor(15,1); lcdprint(pipVals.acActivePower);
+  lcdsetCursor(8,1); lcdprint("  ");    lcdsetCursor(8,1);  lcdprint(pipVals.acFrequency/10,0);
+  lcdsetCursor(14,1); lcdprint("    "); lcdsetCursor(14,1); lcdprint(pipVals.acActivePower);
         
   // lcdprint("bus Voltage: "); lcdprint(pipVals.busVoltage/100); lcdprint(" V");    // not ift onto LCD
       
@@ -209,11 +209,11 @@ void QPIGS_lcd_base()
   lcdsetCursor(0,3);   lcdprint("PV");  // Abbreviation of PhotoVoltaic
   //print metrics
   lcdsetCursor(6,0);   lcdprint("V");   // Grid Voltage
-  lcdsetCursor(12,0);  lcdprint("Hz");  // Grid frequency
+  lcdsetCursor(10,0);  lcdprint("Hz");  // Grid frequency
   lcdsetCursor(18,0);  lcdprint("VA");  // Output load Apparent power (VA)
 
   lcdsetCursor(6,1);   lcdprint("V");  //  Output Voltage
-  lcdsetCursor(12,1);  lcdprint("Hz"); //  Output Frequency
+  lcdsetCursor(10,1);  lcdprint("Hz"); //  Output Frequency
   lcdsetCursor(19,1);  lcdprint("W");  //  Active power (load) 
   
   lcdsetCursor(8,2);   lcdprint("V");  // Battery Voltage
@@ -256,11 +256,16 @@ uint16_t calc_crc(char *msg, int n)
 
 String inverter_send(String inv_command)
 {
-  Serial2.print(NAK+"\r");
-  
-  if ((Serial2.readStringUntil('\x0D')) == NAK )
+  Serial2.print(NAK+"\r");  //  NAK-NAK ... knock-knock for communiction exist
+  #ifdef USE_SOFTWARESERIAL
+    if ((Serial3.readStringUntil('\x0D')) == NAK )   // check if get response for "knock-knock" from inverter on serial port.
    {
     Serial2.flush();
+  #else
+  if ((Serial3.readStringUntil('\x0D')) == NAK )   // check if get response for "knock-knock" from inverter on serial port.
+   {
+    Serial2.flush();
+  #endif
   uint16_t vgCrcCheck;
   int vRequestLen = 0;
   char s[6];
