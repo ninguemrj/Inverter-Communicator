@@ -262,7 +262,7 @@ String inverter_send(String inv_command)
    {
     Serial2.flush();
   #else
-  if ((Serial3.readStringUntil('\x0D')) == NAK )   // check if get response for "knock-knock" from inverter on serial port.
+  if ((Serial2.readStringUntil('\x0D')) == NAK )   // check if get response for "knock-knock" from inverter on serial port.
    {
     Serial2.flush();
   #endif
