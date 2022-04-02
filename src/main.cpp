@@ -8,18 +8,22 @@
   SoftwareSerial Serial3(RX_pin, TX_pin);
 #endif
 
-#define heartbeat_led 2     // hearbeat led pin for ESP32-CAM  4 flashlight / internal led 33   esp32 led 2
-#define I2C_SDA 21          // ESP32 I2c pin        ESP32-CAM 2
-#define I2C_SCL 22          // ESP32 I2c pin        ESP32-CAM 14
-#define LCDADDR 0x27                           // address of LCD on I2C bus
-#define LCDLINES 4
-#define LCDROWS 20
-bool lcdok = false;                            // LCD not present by default (don't change it)
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
-#include <lib_lcd_helper.h>
-#include <menu.h>
+#ifndef LiquidCrystal_I2C_DEFINED
+  #define LiquidCrystal_I2C_DEFINED
+  #define heartbeat_led 2     // hearbeat led pin for ESP32-CAM  4 flashlight / internal led 33   esp32 led 2
+  #define I2C_SDA 21          // ESP32 I2c pin        ESP32-CAM 2
+  #define I2C_SCL 22          // ESP32 I2c pin        ESP32-CAM 14
+  #define LCDADDR 0x27                           // address of LCD on I2C bus
+  #define LCDLINES 4
+  #define LCDROWS 20
+  bool lcdok = false;                            // LCD not present by default (don't change it)
+  #include <Wire.h>
+  #include <LiquidCrystal_I2C.h>
+  #include <lib_lcd_helper.h>
+#endif
 #include <inverter.h>
+#include <LCD_scroll_menu.cpp>
+
 
 String swversion="0.1b";
 
@@ -63,53 +67,19 @@ void setup()
     lcdprint("V"+String(swversion));
     }
   delay(2000);
-  // setup_rotary();
-  QPIGS_lcd_base();
+  lcdclear();
+  //setup_rotary();
+  //printLCDmenu();
+  //QPIGS_lcd_base();
+  menu_setup();
 }
 
 // ******************************************  Loop  ******************************************
 void loop() {
   yield();
   
-  if ( inverter_send("QPIGS")!="-1" )
-    {
-    if (!LCDbase)
-      {
-      QPIGS_lcd_base();
-      }
-    if (nocommunication) 
-      {
-      nocommunication=false;
-      }
-  
-    Serial.println("read data from inverter");
-    #ifdef USE_SOFTWARESERIAL
-     stringOne = Serial3.readStringUntil('\x0D');
-    #else
-      stringOne = Serial2.readStringUntil('\x0D');
-    #endif
-  
-    Serial.println (stringOne.substring(0,stringOne.length()-2));
-    QPIGS_val();                // split inverter answer and store in pipVals
-    QPIGS_print();              // print pipVals on serial port
-    QPIGS_lcd();                // print (some) pipVals in LCD
-    stringOne = "";             // empty string received by inverter
-    // loop_menu();
-    }
-  else
-    { 
-    if (!nocommunication)
-      {
-      lcdclear();
-      lcdsetCursor(4,0);
-      lcdprint("No inverter");
-      lcdsetCursor(3,1);
-      lcdprint("communnication");
-      nocommunication=true;
-      LCDbase=false;
-      delay(1000);
-      }
-    }
-  delay(2000);
+  //invereter_receive();
+  menu_loop();
+  //delay(2000);
 }
 
