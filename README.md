@@ -5,10 +5,6 @@ This application based on ESP32, using Serial2 or SoftwareSerial for communicate
 
 code starts with src/main.cpp
 
-files in use (at the moment):
-src/main.cpp
-include/lib_lcd_helper.h
-
 not all files are in use (yet)!
 
 Used modules:
@@ -18,10 +14,12 @@ Used modules:
 
 Code editor: VSCode
 
-Stage: Establsih communication with inverter, show basic info values (QPIGS) on LCD 
+Stage: 
+- Establsihed communication with inverter, show basic info values (QPIGS) on LCD 
+- LCD menu added, woking either rotary switch, either 3 buttons.
+- reforming code for add next commands to the menu, and print results on LCD, and Serial Console.
 
 Future plans:
-- implement menu with rotary switch
 - implemant all query commands
 - implement configuration commands
 - web server
