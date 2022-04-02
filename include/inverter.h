@@ -3,17 +3,14 @@
 String NAK = "\x28\x4E\x41\x4B\x73\x73";   // "(NAKss"  this message receiving on not accepted command from inverter.
 
 // commands in hex without CRC and CR (don't add CRC and CR, it will be calculated and added before send)
-
-// String QPI = "\x51\x50\x49";
+String QPI = "\x51\x50\x49";
 String QPIGS = "\x51\x50\x49\x47\x53"; // crc "\xB7\xA9" // CR "\x0D"
-/*
 String QPIWS = "\x51\x50\x49\x57\x53";
 String QDI = "\x51\x44\x49";
 String QMOD = "\x51\x4D\x4F\x44";
 String QVFW =  "\x51\x56\x46\x57";
 String QVFW2 = "\x51\x56\x46\x57\x32";
 String QFLAG = "\x51\x46\x4C\x41\x47";
-String QPIWS = "\x51\x50\x49\x57\x53";
 String QMCHGCR = "\x51\x4D\x43\x48\x47\x43\x52";
 String QMUCHGCR = "\x51\x4D\x55\x43\x48\x47\x43\x52";
 String QBOOT = "\x51\x42\x4F\x4F\x54";
@@ -37,9 +34,9 @@ String PPCP001 = "\x50\x50\x43\x50\x30\x30\x31";
 String PPCP002 = "\x50\x50\x43\x50\x30\x30\x32";
 String QPIGS2 = "\x51\x50\x49\x47\x53\x32";
 String POP03 = "\x50\x4F\x50\x30\x33";
-*/
 
-String stringOne;
+
+String inverterData;
 byte incomingdata;
 bool nocommunication=false;
 bool LCDbase = false;
@@ -71,7 +68,7 @@ void QPIGS_val()
   char pipInputBuf[500];
   char *val;
   
-  strcpy(pipInputBuf, stringOne.c_str());
+  strcpy(pipInputBuf, inverterData.c_str());
   // Now split the packet into the values
   val = strtok((char *) pipInputBuf, " "); // get the first value
   if (atoi(val + 1) >10)   // aviod false valuse stored, because it shows 2-3V even if grid isn't connected.
@@ -175,8 +172,10 @@ void QPIGS_print()
   Serial.println(String(pipVals.deviceStatus));
 }
 
-void QPIGS_lcd()
+void inverter_LCD_data(String cmd)
 {
+  if (cmd==QPIGS)
+  {
   // Print out QPIGS values on LCD
   lcdsetCursor(3,0); lcdprint("   ");   lcdsetCursor(3,0);  lcdprint(pipVals.gridVoltage);
   lcdsetCursor(8,0); lcdprint("  ");    lcdsetCursor(8,0);  lcdprint(pipVals.gridFrequency/10,0);
@@ -197,12 +196,15 @@ void QPIGS_lcd()
   lcdsetCursor(8,3); lcdprint("  ");   lcdsetCursor(8,3);  lcdprint(pipVals.PVCurrent);
   lcdsetCursor(12,3); lcdprint("   "); lcdsetCursor(12,3); lcdprint(pipVals.PVPower);
   lcdsetCursor(16,3); lcdprint("   "); lcdsetCursor(16,3); lcdprint(pipVals.loadPercent);
-  LCDbase=true;
+  LCDbase=true;  
+  }
 }
 
-void QPIGS_lcd_base()
+void inverter_LCD_base(String cmd = "")
 {
-  lcdclear();
+
+  if (cmd=QPIGS)
+  {
   lcdsetCursor(0,0);   lcdprint("Gr");  // Abbreviation of Grid
   lcdsetCursor(0,1);   lcdprint("Ou");  // Abbreviation of Output
   lcdsetCursor(0,2);   lcdprint("Ba");  // Abbreviation of Battery
@@ -223,8 +225,10 @@ void QPIGS_lcd_base()
   lcdsetCursor(5,3);   lcdprint("V");  // PV voltage
   lcdsetCursor(10,3);  lcdprint("A");  // PV current
   lcdsetCursor(15,3);  lcdprint("W");  // PV power
-  lcdsetCursor(19,3);  lcdprint("%");  // Inverter load in %
+  lcdsetCursor(19,3);  lcdprint("%");  // Inverter load in %  
+  }
 }
+
 
 // ******************************************  CRC Functions  ******************************************
 uint16_t crc_xmodem_update (uint16_t crc, uint8_t data)
@@ -303,4 +307,47 @@ String inverter_send(String inv_command)
      return "-1";
    }
    return "";
+}
+
+void invereter_receive( String cmd = "" )
+{
+  if ( inverter_send("QPIGS")!="-1" )
+    {
+    if (!LCDbase)
+      {
+      
+      inverter_LCD_base(QPIGS);
+      }
+    if (nocommunication) 
+      {
+      nocommunication=false;
+      }
+  
+    Serial.println("read data from inverter");
+    #ifdef USE_SOFTWARESERIAL
+     inverterData = Serial3.readStringUntil('\x0D');
+    #else
+      inverterData = Serial2.readStringUntil('\x0D');
+    #endif
+  
+    Serial.println (inverterData.substring(0,inverterData.length()-2));
+    QPIGS_val();                // split inverter answer and store in pipVals
+    QPIGS_print();              // print pipVals on serial port
+    inverter_LCD_data(QPIGS);    // print (some) pipVals in LCD                
+    inverterData = "";             // empty string received by inverter
+    }
+  else
+    { 
+    if (!nocommunication)
+      {
+      lcdclear();
+      lcdsetCursor(4,0);
+      lcdprint("No inverter");
+      lcdsetCursor(3,1);
+      lcdprint("communnication");
+      nocommunication=true;
+      LCDbase=false;
+      delay(1000);
+      }
+    }
 }
