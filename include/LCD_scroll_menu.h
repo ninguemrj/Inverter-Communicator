@@ -1,7 +1,6 @@
 #ifndef LCD_menu_scroll
     #define LCD_menu_scroll
 
-//#include <Arduino.h>
 
 /*
  * Concept of scrolling LCD menu.
@@ -41,10 +40,11 @@
     LiquidCrystal_I2C lcd(LCDADDR, LCDCOLUMNS, LCDLINES);
 #endif
 
-int menu_cursor = 0;
-int cursorpos_prev=1;   //dont change it
-bool LCDupdate=false;
-bool LCDclear=false;
+int menu_cursor       = 0;
+int cursorpos_prev    = 1;   //dont change it
+bool show_menucrursor = true;
+bool LCDupdate        = false;
+bool LCDclear         = false;
 
 #ifdef ROTARY_ENABLED 
 // single click

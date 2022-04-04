@@ -14,6 +14,7 @@ void menuSelected(int menuPoint)
         //lcd.clear();
         if (LCDupdate)         // "pragma once run"
           {
+          show_menucrursor = false;
           lcd.clear();
           
           inverter_LCD_base(QPIGS);
@@ -25,6 +26,7 @@ void menuSelected(int menuPoint)
         case 1 :
         if (LCDupdate)          // "pragma once run"
           {
+          show_menucrursor = false;
           lcd.clear();
           LCDupdate=false;
             lcd.setCursor(0,0);

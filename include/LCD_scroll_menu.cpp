@@ -96,10 +96,14 @@ void showMenu(int cursorpos)
 
 void menuCursorPos(int cursorpos)
 {
-  if (cursorpos != cursorpos_prev)
+  if ( !show_menucrursor)
     {
-    showMenu(cursorpos);
-    lcd.setCursor(0,cursorpos_prev);
+      return;
+    }
+  if ( cursorpos != cursorpos_prev )
+    {
+    showMenu( cursorpos );
+    lcd.setCursor(0, cursorpos_prev);
     lcd.print(" ");
     }
 
@@ -173,6 +177,7 @@ void buttonSelect()
       Serial.print("menu unselected: ");
       cursorpos_prev++;
       LCDclear=true;
+      show_menucrursor = true;
       }
       Serial.println(menu_cursor);
     }
@@ -195,8 +200,7 @@ void showDirection(ESPRotary& r) {
   if ( r.directionToString(r.getDirection()) == "RIGHT" )
     {
       buttonUp();
-    }
-   
+    }   
 }
 #endif
 
@@ -213,7 +217,7 @@ void menu_setup()
   pinMode(pin_up, INPUT_PULLUP); //RotaryCLK
   pinMode(pin_down, INPUT_PULLUP); //RotaryDT
   pinMode(pin_button, INPUT_PULLUP); //Button
-  
+    
   attachInterrupt(digitalPinToInterrupt(pin_up), buttonUp, FALLING);     //PushButton down pin is an interrupt pin
   attachInterrupt(digitalPinToInterrupt(pin_down), buttonDown, FALLING); //PushButton down pin is an interrupt pin
   attachInterrupt(digitalPinToInterrupt(pin_button), buttonSelect, FALLING);   //PushButton pin is an interrupt pin

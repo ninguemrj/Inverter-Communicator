@@ -1,5 +1,9 @@
 #ifndef LIB_LCD_HELPER
 #define LIB_LCD_HELPER
+  #ifndef byte
+    #define uint8_t byte
+  #endif 
+
 /* ********************************************************************** LCD Functions ********************************************** */
 #include <Wire.h>
 LiquidCrystal_I2C lcd(LCDADDR, LCDROWS, LCDLINES);
@@ -16,7 +20,7 @@ void  lcdinit()
   delay(10);
   byte lcderror = Wire.endTransmission();
   if ( lcderror == 0 ) { lcdok = true; }
-  if ( lcdok == true ) 
+  if ( lcdok ) 
      { 
       Serial.println("LDC Connected, initalizing."); 
      } 
@@ -31,12 +35,12 @@ void  lcdinit()
   lcd.noBacklight(); // turn off backlight
   lcd.backlight(); // turn on backlight.
   // characters of progressbar
-  byte zero[]  = { B00000, B00000, B00000, B00000, B00000, B00000, B00000, B00000 };
-  byte one[]   = { B10000, B10000, B10000, B10000, B10000, B10000, B10000, B10000 };
-  byte two[]   = { B11000, B11000, B11000, B11000, B11000, B11000, B11000, B11000 };
-  byte three[] = { B11100, B11100, B11100, B11100, B11100, B11100, B11100, B11100 };
-  byte four[]  = { B11110, B11110, B11110, B11110, B11110, B11110, B11110, B11110 };
-  byte five[]  = { B11111, B11111, B11111, B11111, B11111, B11111, B11111, B11111 };
+  byte zero[]  = { 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000 };
+  byte one[]   = { 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000 };
+  byte two[]   = { 0b11000, 0b11000, 0b11000, 0b11000, 0b11000, 0b11000, 0b11000, 0b11000 };
+  byte three[] = { 0b11100, 0b11100, 0b11100, 0b11100, 0b11100, 0b11100, 0b11100, 0b11100 };
+  byte four[]  = { 0b11110, 0b11110, 0b11110, 0b11110, 0b11110, 0b11110, 0b11110, 0b11110 };
+  byte five[]  = { 0b11111, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111 };
   lcd.createChar(0, zero);
   lcd.createChar(1, one);
   lcd.createChar(2, two);
