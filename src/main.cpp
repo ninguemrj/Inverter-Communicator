@@ -1,4 +1,9 @@
-#include <Arduino.h>
+#ifndef byte
+  #define uint8_t byte
+#endif 
+
+#include <HardwareSerial.h>
+
 // #define USE_SOFTWARESERIAL     //uncomment this line if you want use softwareserial instead of hw
 #ifdef USE_SOFTWARESERIAL
   #include <SoftwareSerial.h>
@@ -17,11 +22,10 @@
   #define LCDLINES 4
   #define LCDROWS 20
   bool lcdok = false;                            // LCD not present by default (don't change it)
-  #include <Wire.h>
   #include <LiquidCrystal_I2C.h>
   #include <lib_lcd_helper.h>
 #endif
-#include <inverter.h>
+#include <inverter.cpp>
 #include <LCD_scroll_menu.cpp>
 
 
