@@ -207,12 +207,13 @@ uint16_t calc_crc(char *msg, int n)
 
 String inverter_send(String inv_command)
 {
-  Serial2.print(NAK+"\r");  //  NAK-NAK ... knock-knock for communiction exist
   #ifdef USE_SOFTWARESERIAL
+   Serial3.print(NAK+"\r");  //  NAK-NAK ... knock-knock for communiction exist
     if ((Serial3.readStringUntil('\x0D')) == NAK )   // check if get response for "knock-knock" from inverter on serial port.
    {
-    Serial2.flush();
+    Serial3.flush();
   #else
+  Serial2.print(NAK+"\r");  //  NAK-NAK ... knock-knock for communiction exist
   if ((Serial2.readStringUntil('\x0D')) == NAK )   // check if get response for "knock-knock" from inverter on serial port.
    {
     Serial2.flush();
