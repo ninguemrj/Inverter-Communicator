@@ -76,8 +76,24 @@ void store_val(String cmd)
     }
 }
 
-void QPIGS_print()
+void store_status ()
 {
+  char val[8];
+  strcpy(pipVals.deviceStatus, val); // get the first value
+  DevStatus.SBUpriority      = val[0];
+  DevStatus.ConfigStatus     = val[1];    // configuration status: 1: Change 0: unchanged b6
+  DevStatus.FwUpdate         = val[2];        // b5: SCC firmware version 1: Updated 0: unchanged
+  DevStatus.LoadStatus       = val[3];      // b4: Load status: 0: Load off 1:Load on
+  DevStatus.BattVoltSteady   = val[4];  // b3: battery voltage to steady while charging
+  DevStatus.Chargingstatus   = val[5];  // b2: Charging status( Charging on/off)
+  DevStatus.SCCcharge        = val[6];     // b1: Charging status( SCC charging on/off)
+  DevStatus.ACcharge         = val[7];      // b0: Charging status(AC charging on/off)
+}
+
+void inverter_console_data(String cmd)
+{
+  if (cmd==QPIGS)
+  {
   // Print out readings
   Serial.print("grid Voltage:......... ");
   Serial.print(pipVals.gridVoltage); Serial.println(" V");
@@ -115,6 +131,7 @@ void QPIGS_print()
   Serial.print(pipVals.batteryDischargeCurrent); Serial.println(" A");
   Serial.print("DeviceStatus:......... ");
   Serial.println(String(pipVals.deviceStatus));
+  }
 }
 
 void inverter_LCD_data(String cmd)
@@ -264,14 +281,14 @@ void invereter_receive( String cmd )
     if (!LCDbase)
       {
       
-      inverter_LCD_base(QPIGS);
+      inverter_LCD_base(cmd);
       }
     if (nocommunication) 
       {
       nocommunication=false;
       }
   
-    Serial.println("read data from inverter");
+    // Serial.println("read data from inverter");
     #ifdef USE_SOFTWARESERIAL
      inverterData = Serial3.readStringUntil('\x0D');
     #else
@@ -280,7 +297,7 @@ void invereter_receive( String cmd )
   
     Serial.println (inverterData.substring(0,inverterData.length()-2));
     store_val(cmd);                // split inverter answer and store in pipVals
-    QPIGS_print();              // print pipVals on serial port
+    inverter_console_data(cmd);     // print pipVals on serial port
     inverter_LCD_data(cmd);    // print (some) pipVals in LCD                
     inverterData = "";             // empty string received by inverter
     }

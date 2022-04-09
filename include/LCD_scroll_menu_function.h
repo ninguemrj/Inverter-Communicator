@@ -21,6 +21,7 @@ void menuSelected(int menuPoint)
           LCDupdate=false;
           }
         invereter_receive(QPIGS);
+        store_status();
          break;
         
         case 1 :
