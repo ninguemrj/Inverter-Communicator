@@ -76,6 +76,8 @@ void setup()
   //printLCDmenu();
   //QPIGS_lcd_base();
   menu_setup();
+  pinMode(heartbeat_led, OUTPUT); //set up internal hearbeat led
+  digitalWrite(heartbeat_led, LOW);
 }
 
 // ******************************************  Loop  ******************************************
@@ -85,5 +87,14 @@ void loop() {
   //invereter_receive();
   menu_loop();
   //delay(2000);
+  
+  if (DevStatus.SCCcharge)
+    {
+      digitalWrite(heartbeat_led, HIGH);
+    }
+    else
+    {
+      digitalWrite(heartbeat_led, LOW);
+    }
 }
 
