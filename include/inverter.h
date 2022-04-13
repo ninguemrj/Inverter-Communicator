@@ -9,6 +9,7 @@
 #include <HardwareSerial.h>
 #include <lib_lcd_helper.h>
 
+String POP_status;						   // Last status from POP01/POP02 commands, should be replaced by a Query from inverter in the future
 String NAK = "\x28\x4E\x41\x4B\x73\x73";   // "(NAKss"  this message receiving on not accepted command from inverter.
 String ACK = "\x41\x43\x4B";               // this message receiving on acknovledge of command
 // enquiry commands
@@ -36,7 +37,8 @@ String PD     = "\x50\x44";                 // setting some status disable      
 String PE     = "\x50\x45";                 // setting some status enable                            pg 13
 String PF     = "\x50\x46";                 // Setting control parameter to default value            pg 14
 String F      = "\x46";                     //  F<nn><cr>: Setting device output rating frequency    pg 15
-String POP    = "\x50\x4F\x50";             // POP<NN><cr>: Setting device output source priority    pg 15
+String POP01  = "\x50\x4F\x50\x30\x31\xD2\x69"; // CRC included    // POP01 Setting device output source priority: SolarUtilityBat
+String POP02  = "\x50\x4F\x50\x30\x32\xE2\x0B"; // CRC included    // POP02 Setting device output source priority: SolarBatUtility 
 String PBCV   = "\x50\x42\x43\x56";         // PBCV<nn.n><cr>: Set battery re-charge voltage         pg 16
 String PBDV   = "\x50\x42\x44\x56";         // PBDV<nn.n><cr>: Set battery re-discharge voltage      pg 16
 String PCP    = "\x50\x43\x50";             // PCP<NN><cr>: Setting device charger priority          pg 16
@@ -60,10 +62,10 @@ bool LCDbase = false;
 
 // Structure to store the data for QPIGS
 struct pipVals_t {
-  uint32_t gridVoltage;             // xxx V
-  uint32_t gridFrequency;           // xx.xx Hz  *100
-  uint32_t acOutput;                // xxx V
-  uint32_t acFrequency;             // xx.xx Hz  *100
+  uint32_t gridVoltage;             // xxx V     * 10 
+  uint32_t gridFrequency;           // xx.xx Hz  * 10
+  uint32_t acOutput;                // xxx V     * 10 
+  uint32_t acFrequency;             // xx.xx Hz  * 10
   uint32_t acApparentPower;         // xxxx VA
   uint32_t acActivePower;           // xxxx W
   uint32_t loadPercent;             // xxx %
@@ -78,6 +80,14 @@ struct pipVals_t {
   uint32_t batterySCC;              // xx.xx V   *100
   uint32_t batteryDischargeCurrent; // xxxx A
   char deviceStatus[8];             // 8 bit binary
+  
+// Additional fields from MAX inverter. How to implement them without break your code?
+/*
+  uint32_t batOffsetFan;            // Battery voltage offset for fans on  (2 numbers)
+  uint32_t eepromVers;              // EEPROM version (2 numbers)
+  uint32_t PV1_chargPower;          // PV1 Charging power (5 numbers)
+  char deviceStatus2[4];            // Devide status 2
+*/
 } pipVals;
 
 struct DevStatus_t 
@@ -96,6 +106,14 @@ struct DevStatus_t
       // 111: Charging on with SCC and AC charge on
 } DevStatus;
 
+// Additional fields from MAX inverter. How to implement them without break your code?
+/*    struct DevStatus2_t 
+    {
+      bool changingFloatMode = 0 ;    // 10: flag for charging to floating mode
+      bool SwitchOn = 0 ;     // b9: Switch On
+      bool dustProof = 0 ;        // b8: flag for dustproof installed(1-dustproof installed,0-no dustproof, only available for Axpert V series)
+    } DevStatus2;
+*/
 
 struct QpiMessage
 {

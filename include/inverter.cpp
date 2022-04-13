@@ -12,8 +12,8 @@ void store_val(String cmd)
   val = strtok((char *) pipInputBuf, " "); // get the first value
   if (atoi(val + 1) >10)   // aviod false value stored, because it shows 2-3V even if grid isn't connected.
     {
-    pipVals.gridVoltage = atoi(val + 1);  // Skip the initial '('
-    }
+        pipVals.gridVoltage = atoi(val + 1) * 10;  // Skip the initial '(' // Times 10 to keep compatible with inverter with decimal on AC Volts
+	}
     else
     {
     pipVals.gridVoltage = 0;
@@ -23,7 +23,7 @@ void store_val(String cmd)
   pipVals.gridFrequency = atof(val) * 10 ;
 
   val = strtok(0, " "); // Get the next value
-  pipVals.acOutput = atoi(val);
+  pipVals.acOutput = atoi(val)  * 10 ;           // Times 10 to keep compatible with inverter with decimal on AC Volts
 
   val = strtok(0, " "); // Get the next value
   pipVals.acFrequency = atof(val) * 10;
@@ -68,6 +68,21 @@ void store_val(String cmd)
 
   val = strtok(0, " "); // Get the next value
   strcpy(pipVals.deviceStatus, val);
+
+// Additional fields from MAX inverter. How to implement them without break your code?
+
+/*	val = strtok(0, " "); // Get the next value
+    pipVals.batOffsetFan = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.eepromVers = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    pipVals.PV1_chargPower = atoi(val);
+  
+    val = strtok(0, " "); // Get the next value
+    strcpy(pipVals.deviceStatus2, String(val).substring(0,3).c_str());
+*/
   }
 
    if ( cmd == QPI )
@@ -90,17 +105,30 @@ void store_status ()
   DevStatus.ACcharge         = val[7];      // b0: Charging status(AC charging on/off)
 }
 
+// Additional fields from MAX inverter. How to implement them without break your code?
+/*
+void INVERTER::store_status2 ()    // To keep compatible with inverter with additional status field (MAX)        
+{
+  char val[4];
+  strcpy(val, pipVals.deviceStatus2);		// get the first value
+
+  DevStatus2.changingFloatMode			 = val[0] ;		// 10: flag for charging to floating mode
+  DevStatus2.SwitchOn       				 = val[1] ;		// b9: Switch On
+  DevStatus2.dustProof			  	     = val[2] ;		// b8: flag for dustproof installed(1-dustproof installed,0-no dustproof, only available for Axpert V series)
+}
+*/
+
 void inverter_console_data(String cmd)
 {
   if (cmd==QPIGS)
   {
   // Print out readings
   Serial.print("grid Voltage:......... ");
-  Serial.print(pipVals.gridVoltage); Serial.println(" V");
+  Serial.print(pipVals.gridVoltage/10.0,1); Serial.println(" V");
   Serial.print("grid Frequency:....... ");
   Serial.print(pipVals.gridFrequency/10.0,1); Serial.println(" Hz");
   Serial.print("AC Output:............ ");
-  Serial.print(pipVals.acOutput); Serial.println(" V");
+  Serial.print(pipVals.acOutput/10.0,1); Serial.println(" V");
   Serial.print("AC Frequency:......... ");
   Serial.print(pipVals.acFrequency/10.0,1); Serial.println(" Hz");
   Serial.print("AC ApparentPower:..... ");
@@ -139,10 +167,10 @@ void inverter_LCD_data(String cmd)
   if (cmd==QPIGS)
   {
   // Print out QPIGS values on LCD
-  lcdsetCursor(3,0); lcdprint("   ");   lcdsetCursor(3,0);  lcdprint(pipVals.gridVoltage);
+  lcdsetCursor(3,0); lcdprint("   ");   lcdsetCursor(3,0);  lcdprint(pipVals.gridVoltage/10,0);
   lcdsetCursor(8,0); lcdprint("  ");    lcdsetCursor(8,0);  lcdprint(pipVals.gridFrequency/10,0);
   lcdsetCursor(14,0); lcdprint("    "); lcdsetCursor(14,0); lcdprint(pipVals.acApparentPower);
-  lcdsetCursor(3,1); lcdprint("   ");   lcdsetCursor(3,1);  lcdprint(pipVals.acOutput);
+  lcdsetCursor(3,1); lcdprint("   ");   lcdsetCursor(3,1);  lcdprint(pipVals.acOutput/10,0);
   lcdsetCursor(8,1); lcdprint("  ");    lcdsetCursor(8,1);  lcdprint(pipVals.acFrequency/10,0);
   lcdsetCursor(14,1); lcdprint("    "); lcdsetCursor(14,1); lcdprint(pipVals.acActivePower);
         
@@ -226,14 +254,16 @@ String inverter_send(String inv_command)
 {
   #ifdef USE_SOFTWARESERIAL
    Serial3.print(NAK+"\r");  //  NAK-NAK ... knock-knock for communiction exist
-    if ((Serial3.readStringUntil('\x0D')) == NAK )   // check if get response for "knock-knock" from inverter on serial port.
+   Serial3.flush(); // Flush should be sent after WRITE command and before the READ one, to wait the transmition buffer be empty before star reading
+
+	if ((Serial3.readStringUntil('\x0D')) == NAK )   // check if get response for "knock-knock" from inverter on serial port.
    {
-    Serial3.flush();
+
   #else
   Serial2.print(NAK+"\r");  //  NAK-NAK ... knock-knock for communiction exist
-  if ((Serial2.readStringUntil('\x0D')) == NAK )   // check if get response for "knock-knock" from inverter on serial port.
+  Serial3.flush(); // Flush should be sent after WRITE command and before the READ one, to wait the transmition buffer be empty before star reading
+ if ((Serial2.readStringUntil('\x0D')) == NAK )   // check if get response for "knock-knock" from inverter on serial port.
    {
-    Serial2.flush();
   #endif
   uint16_t vgCrcCheck;
   int vRequestLen = 0;
@@ -263,8 +293,10 @@ String inverter_send(String inv_command)
   //Sending Request to inverter
   #ifdef USE_SOFTWARESERIAL
   Serial3.print(inv_command);
+  Serial3.flush(); // Flush should be sent after WRITE command and before the READ one, to wait the transmition buffer be empty before star reading
   #else
   Serial2.print(inv_command);
+  Serial2.flush(); // Flush should be sent after WRITE command and before the READ one, to wait the transmition buffer be empty before star reading
   #endif
    }
    else
@@ -316,3 +348,134 @@ void invereter_receive( String cmd )
       }
     }
 }
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// I changed the inverter_receive function from STRING to INT and I added a 
+// new By reference argument (this also avoids using the global var "inverterData").
+// This also permit to use the inverter_receive as a generic communication (private) function. 
+// It would be called by others public and specialized functions (like "ask_inverter_data" below).
+// Therefore, the inverter resulting string is treated by the specialized caller function
+// Yours LCD calls should be moved to ask_inverter_data, in case you agree with this change
+ 
+/*
+int INVERTER::inverter_receive( String cmd, String& str_return )
+{
+  if ( inverter_send(cmd)==0 )
+    {
+       str_return = Serial3.readStringUntil('\x0D');
+
+        // Pending:
+		// TEST for NAK
+        // TEST for string lengh
+        // TEST for CRC receipt match with calculated CRC
+        // Different error hangling codes for each one
+  
+      return 0;
+    }
+    else
+    {
+   	  return -1;
+	  }
+    
+}
+
+int INVERTER::ask_inverter_data()
+    {
+      String _resultado = "";
+      if (inverter_receive(QPIGS, _resultado) == 0) 
+      {
+         debugV("INVERTER: QPIGS: command executed successfully. Returned: |%s|", _resultado.c_str());
+         
+         store_QPIGS(_resultado.c_str());       // split inverter answer and store in pipVals
+         inverter_console_data();               // print pipVals on serial port
+         inverterData = "";                     // empty string received by inverter
+      }
+      else
+      {
+         store_QPIGS("");                       // send empty string to erase previous amounts
+         inverter_console_data();               // print pipVals on serial port
+         
+         // Needs to treat errors for better error messages
+         debugE("INVERTER: QPIGS: Error executing the command! Returned: |%s|", _resultado.c_str());    
+      }      
+    }
+
+*/
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// My automation implementation (considering time only for while)
+// I left it commented because:
+//    - POP01/POP02 commands were not working with calculated CRC. I hard coded theirs CRCs on .h file.
+//      If you call with your inverter_send function, the CRC will be added again. 
+//      I removed the CRC calc from the inverter_send and hardcoded the CRC on QPIGS string too.
+//
+//    - I changed the inverter_receive function from STRING to INT and I added a new By reference) argument
+//      I don´t know if you would agree with all these changes. 
+//      So, you can choose between changing the automation function or accept my new inverter_receive function
+
+/*
+int INVERTER::handle_inverter_automation(int _hour, int _min)
+    {
+      String _resultado = "";
+      uint32_t minutes = (_hour * 60) + _min ;              // Minutes to compare with preset time rules
+      
+      const uint32_t _evening_min = ( 18   * 60) +   0  ;   // 18:00hs evening start (sun stops to generating on 16:30, but 
+                                                            // I just use battery as from 18hs to save them from deep discharge
+                                                       
+      const uint32_t _begin_min     = (  7   * 60) +   30 ; // 07:30hs start generating solar power
+
+      // RULE #1 //////////////////////////////////////////////////////////
+      //  - After "_begin_min" and before "_evening_min"
+      //
+      //  SET: SOLAR = Solar First (Solar, Utility and Battery) 
+      /////////////////////////////////////////////////////////////////////
+       
+      if ((_begin_min < minutes) && (minutes < _evening_min))
+      {
+        // Informed time is between sun rise and evening = set as "Solar First"
+        
+        if (POP_status != POP01)
+        {
+          // Only changes the Output Priority if previous status is different
+          if (inverter_receive(POP01, _resultado) == 0)                   
+          {
+             debugA("INVERTER: POP01: command executed successfully. Returned: |%s|", _resultado.c_str());
+             POP_status = POP01;
+          }
+          else
+          {
+             // Needs to treat errors for better error messages
+             debugA("INVERTER: POP01: Error executing the command! Returned: |%s|", _resultado.c_str());       
+          }
+        }
+      }
+
+      // RULE #2 //////////////////////////////////////////////////////////
+      //  - Before "_begin_min" OR after "_evening_min"
+      //
+      //  SET: SBU (Solar, Battery and Utility) 
+      /////////////////////////////////////////////////////////////////////
+       
+      if ((_begin_min > minutes) || (minutes > _evening_min))
+      {
+        // Informed time is between sun rise and evening = set as "Solar First"
+        
+        if (POP_status != POP02)
+        {
+          // Only changes the Output Priority if previous status is different
+          if (inverter_receive(POP02, _resultado) == 0)                   
+          {
+             debugA("INVERTER: POP02: command executed successfully. Returned: |%s|", _resultado.c_str());
+             POP_status = POP02;
+          }
+          else
+          {
+            // Needs to treat errors for better error messages
+             debugA("INVERTER: POP02: Error executing the command! Returned: |%s|", _resultado.c_str());       
+          }
+        }
+      }
+    }
+
+	*/
