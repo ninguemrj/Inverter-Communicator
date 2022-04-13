@@ -53,12 +53,12 @@ void store_val(String cmd)
   pipVals.inverterTemperature = atoi(val);
 
   val = strtok(0, " "); // Get the next value
-  pipVals.PVCurrent = atoi(val);
+  pipVals.PVCurrent = atof(val)*10;
 
   val = strtok(0, " "); // Get the next value
-  pipVals.PVVoltage = atoi(val);
+  pipVals.PVVoltage = atof(val)*10;
 
-  pipVals.PVPower= pipVals.PVVoltage * pipVals.PVCurrent; // Calculate PV Power
+  pipVals.PVPower= (pipVals.PVVoltage/10) * (pipVals.PVCurrent/10) * 10; // Calculate PV Power
 
   val = strtok(0, " "); // Get the next value
   pipVals.batterySCC = atof(val)*100;
@@ -148,11 +148,11 @@ void inverter_console_data(String cmd)
   Serial.print("inverter Temperature:. ");
   Serial.print(pipVals.inverterTemperature/10.0); Serial.println(" C");
   Serial.print("PV Current:........... ");
-  Serial.print(pipVals.PVCurrent); Serial.println(" A");
+  Serial.print(pipVals.PVCurrent/10.0,1); Serial.println(" A");
   Serial.print("PV Voltage:........... ");
-  Serial.print(pipVals.PVVoltage); Serial.println(" V");
+  Serial.print(pipVals.PVVoltage/10.0,1); Serial.println(" V");
   Serial.print("PV Power:............. ");
-  Serial.print(pipVals.PVPower);  Serial.println(" W");
+  Serial.print(pipVals.PVPower/10.0,1);  Serial.println(" W");
   Serial.print("battery SCC:.......... ");
   Serial.print(pipVals.batterySCC/100.00,2); Serial.println(" V");
   Serial.print("battery DischargeCurrent: ");
