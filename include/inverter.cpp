@@ -12,7 +12,7 @@ void store_val(String cmd)
   val = strtok((char *) pipInputBuf, " "); // get the first value
   if (atoi(val + 1) >10)   // aviod false value stored, because it shows 2-3V even if grid isn't connected.
     {
-        pipVals.gridVoltage = atoi(val + 1) * 10;  // Skip the initial '(' // Times 10 to keep compatible with inverter with decimal on AC Volts
+        pipVals.gridVoltage = atof(val + 1) * 10;  // Skip the initial '(' // Times 10 to keep compatible with inverter with decimal on AC Volts
 	}
     else
     {
@@ -23,7 +23,7 @@ void store_val(String cmd)
   pipVals.gridFrequency = atof(val) * 10 ;
 
   val = strtok(0, " "); // Get the next value
-  pipVals.acOutput = atoi(val)  * 10 ;           // Times 10 to keep compatible with inverter with decimal on AC Volts
+  pipVals.acOutput = atof(val)  * 10 ;           // Times 10 to keep compatible with inverter with decimal on AC Volts
 
   val = strtok(0, " "); // Get the next value
   pipVals.acFrequency = atof(val) * 10;
@@ -379,6 +379,51 @@ int INVERTER::inverter_receive( String cmd, String& str_return )
 	  }
     
 }
+
+
+int INVERTER::inverter_send(String inv_command)
+{
+	Serial3.print("QRST\r");  //  knock-knock for communiction exist
+	Serial3.flush();          // Wait finishing transmitting before going on...
+	if (Serial3.readStringUntil('\r') == "(NAKss" )   // check if get response for "knock-knock" from inverter on serial port.
+	{
+ // 		uint16_t vgCrcCheck;
+ // 		int vRequestLen = 0;
+ // 		char s[6];
+ // 		int xx; 
+ // 		int yy;
+ // 
+ // 		vRequestLen = inv_command.length();
+ //  		char vRequestArray[vRequestLen]; //Arrary define
+ // 		inv_command.toCharArray(vRequestArray, vRequestLen + 1);
+ // 
+ // 		//Calculating CRC
+ // 		vgCrcCheck = calc_crc(vRequestArray,vRequestLen);
+ // 
+ // 		// CRC returns two characters - these need to be separated and send as HEX to Inverter
+ // 		String vgCrcCheckString = String(vgCrcCheck, HEX);
+ // 		String vCrcCorrect = vgCrcCheckString.substring(0,2) + " " + vgCrcCheckString.substring(2,4);
+ // 			
+ // 		//CRC are returned as B7A9 - need to separate them and change from ASCII to HEX
+ // 		vCrcCorrect.toCharArray(s, 6);
+ // 		sscanf(s, "%x %x", &xx, &yy);  
+ // 
+ // 		inv_command += char(xx);   // add CRC byte 1
+ // 		inv_command += char(yy);   // add CRC byte 2
+ 
+
+      inv_command += "\x0D";     // add CR
+  		//Sending Request to inverter
+  		Serial3.print(inv_command);
+  		Serial3.flush();          // Wait finishing transmitting before going on...
+  }
+  else
+  {
+		return -1; // No serial communication
+  }
+   return 0; // NAKss returned, serial communication up and running
+}
+
 
 int INVERTER::ask_inverter_data()
     {
