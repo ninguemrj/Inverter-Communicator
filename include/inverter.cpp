@@ -365,18 +365,19 @@ int INVERTER::inverter_receive( String cmd, String& str_return )
     {
        str_return = Serial3.readStringUntil('\x0D');
 
-        // Pending:
-		// TEST for NAK
-        // TEST for string lengh
-        // TEST for CRC receipt match with calculated CRC
-        // Different error hangling codes for each one
-  
+      // checking Command not recognized 
+      if (str_return == "(NAKss") 
+      {
+        debugV("INVERTER: %s : Not recognized command: %s", cmd, str_return);
+        return -2;   
+      }
+	  
       return 0;
     }
     else
     {
    	  return -1;
-	  }
+	}
     
 }
 
@@ -425,25 +426,42 @@ int INVERTER::inverter_send(String inv_command)
 }
 
 
+/////////////////////////////////////////////////////////////////////
+// change on 14/04/22
+// inverter_console_data() moved to loop()
+// checking short string response
+// update pipvals anyway, with data or blank
+// Serial object by reference no considered as it need class
+/////////////////////////////////////////////////////////////////////
+
 int INVERTER::ask_inverter_data()
     {
+      int funct_return = 0;
       String _resultado = "";
       if (inverter_receive(QPIGS, _resultado) == 0) 
       {
-         debugV("INVERTER: QPIGS: command executed successfully. Returned: |%s|", _resultado.c_str());
-         
-         store_QPIGS(_resultado.c_str());       // split inverter answer and store in pipVals
-         inverter_console_data();               // print pipVals on serial port
-         inverterData = "";                     // empty string received by inverter
+        // checking return string lengh for QPIGS command 
+        if (strlen(_resultado.c_str()) < 89)       
+        {
+          debugE("INVERTER: QPIGS: Receipt string is not completed, size = |%d|.  Returned: %s", strlen(_resultado.c_str()), _resultado.c_str());
+          _resultado = "";                                // clear the string result from inverter as it is not complete
+          funct_return = -1;                              // short string lengh for QPIGS command 
+        }
+        else
+        {
+          debugV("INVERTER: QPIGS: command executed successfully. Returned: |%s|", _resultado.c_str());
+          funct_return = 0;                               // Success!!!
+        }
       }
       else
       {
-         store_QPIGS("");                       // send empty string to erase previous amounts
-         inverter_console_data();               // print pipVals on serial port
-         
-         // Needs to treat errors for better error messages
          debugE("INVERTER: QPIGS: Error executing the command! Returned: |%s|", _resultado.c_str());    
+         _resultado = "";                                 // clear the string result from inverter as an error occured
+         funct_return = -2;                               // short string lengh for QPIGS command 
       }      
+
+      store_QPIGS(_resultado.c_str());                    // store in pipVals the inverter response or nothing.
+      return (int)funct_return;
     }
 
 */
